@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-config
+  namespace: curso-k8s-config
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-config
+  template:
+    metadata:
+      labels:
+        app: app-config
+    spec:
+      containers:
+        - name: app
+          image: app-k8s-config:1.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+
+          env:
+            - name: APP_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: APP_NAME
+
+            - name: APP_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: APP_ENV
+
+            - name: APP_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: APP_VERSION
+
+            - name: SYSTEM_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: SYSTEM_USER
+
+            - name: SYSTEM_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: SYSTEM_PASSWORD
+
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+              readOnly: true
+
+            - name: data-volume
+              mountPath: /data
+
+      volumes:
+        - name: config-volume
+          configMap:
+            name: app-config
+            items:
+              - key: mensagem.txt
+                path: mensagem.txt
+
+        - name: data-volume
+          emptyDir: {}

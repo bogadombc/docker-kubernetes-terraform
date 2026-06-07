@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: curso-k8s-config
+data:
+  APP_NAME: "Aplicação Configurada no Kubernetes"
+  APP_ENV: "desenvolvimento"
+  APP_VERSION: "v1"
+  mensagem.txt: |
+    Esta é uma nova mensagem alterada.
+    Isso permite alterar configurações sem reconstruir a imagem Docker.

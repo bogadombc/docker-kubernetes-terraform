@@ -1,0 +1,240 @@
+Anotações do curso de docker , kubernetes e terraform
+
+04/06/26
+Aula 3. Introdução
+
+Imagem: É o pacote pronto da aplicação, são imutáveis, não podem ser alteradas após criadas
+
+Container docker: É a imagem em execução
+
+
+- Ciclo de vida do docker
+build: dockerfile/image
+push: envia ao registry
+pull & run: baixa e executa
+
+
+o registry pode ser público(docker hub) ou privado(ex: plataformas de nuvens)
+
+obs: no caso de registry públicos, sempre buscar imagens oficiais da empresa ou fontes confiáveis
+
+Aula 04. Kubernetes
+São orquestradores de containers. Por que existem?
+- auto-healing: não podem parar de funcionar
+- escalabilidade: necessidade de duplicação, ou várias instâncias da aplicação para atender a demanda, até diminuir a quantidade de aplicações, quando a demanda cair
+- service discovery: faz os serviços se comunicarem em ambientes dinâmicos
+
+outras necessidades em produção: atualização, rollback, balanceamento de carga, configurações, segurança, rede, monitoramento 
+
+
+Aula 05. Principais arquivos do docker
+
+dockerfile:     receita para construir uma imagem
+.dockerignore:  arquivos que não entram no build
+compose.yaml:   define múltiplos containers e multiplos serviços (API, banco, ...)
+.env:          variáveis de ambiente do projeto
+
+
+=======  Módulo 03 - Docker na prática
+Aula 10 - Criando Imagem
+
+# -t define o nome e a tag da imagem, ou diferentes versões da imagem (ex: dev e prod)
+
+docker build -t app-docker-modulo2:1.0 .     (nome da imagem é app-docker-modulo2:1.0)
+
+#listar imagens
+docker images
+
+
+Aula 11 - Criando containers
+# -p 8080:8000  (portalocal:porta container)
+
+docker run --name app-teste-foreground -p 8080:8000 app-docker-modulo2:1.0
+
+# removendo o container
+docker rm app-teste-foreground
+
+# rodando sem travar o terminal (-d)
+docker run -d --name app-teste-foreground -p 8080:8000 app-docker-modulo2:1.0
+
+
+# listando containers em execução
+docker ps
+
+# visualizando os logs
+docker logs app-teste-foreground
+
+  # visualizando os logs em tempo real
+  docker logs -f app-teste-foreground
+
+CTRL + c (sair)   
+
+
+# entrando no container
+docker exec -it app-teste-foreground sh
+
+agora permite executar comandos linux no container
+pwd
+ls -la
+env | grep APP_NAME
+env | grep PORT
+
+exit (sair)
+
+
+# parando o container
+docker stop app-teste-foreground
+
+
+
+Aula 12 - Rodando a aplicação em diferentes portas
+docker run -d --name app-teste-foreground -p 8080:8000 app-docker-modulo2:1.0
+docker run -d --name app-teste-foreground -p 8090:8000 app-docker-modulo2:1.0
+
+
+Aula 13 - Usando volumes
+Volumes são uma forma de persistir os dados
+
+Ou seja, se em determinado container com dados um volume for criado, caso o container seja descartado, e posteriormente outra instância do container seja criada, os dados ainda estarão lá.
+
+podemos nomear, se não nomearmos, o docker dá um nome a ele
+
+# criando um volume
+docker volume create dados-app-modulo2
+
+# visualizando o volume
+docker volume ls
+
+# criando um container e mapeando o volume com a pasta data
+
+(nome do container é 'app-com-volume' nome da imagem é 'app-docker-modulo2:1.0')
+
+docker run -d --name app-com-volume -p 8080:8000 -v dados-app-modulo2:/data app-docker-modulo2:1.0   
+
+
+# executando o volume e vendo os dados
+docker exec -it app-com-volume sh
+ls -la /data
+cat /data/access.log
+exit
+
+parando e excluindo o container e recriando com o mesmo volume, para checar se os dados estarão lá
+
+docker stop app-com-volume
+docker rm app-com-volume
+
+docker run -d --name app-com-volume -p 8080:8000 -v dados-app-modulo2:/data app-docker-modulo2:1.0
+
+docker exec -it app-com-volume sh
+
+
+Aula 14 - BindMount
+
+Permite que a aplicação dentro do container tenha acesso a arquivos de fora, arquivos do host
+
+o bindmount mapeia a pasta do container com uma pasta do host
+
+# criando o novo container para compartilhar pastas
+
+${PWD}/dados-locais:/data   essa parte mapeia a pasta 'dados-locais' do host com a pasta 'data' do container
+docker run -d --name app-com-bind -p 8080:8000 -v ${PWD}/dados-locais:/data app-docker-modulo2:1.0
+
+lembra que aqui, ao remover o container , os dados gravados no host são mantidos
+
+
+05/06/2026
+Aula 15 - Inspecionando Imagens
+
+# criando um container renomeando a variável de ambiente '-e APP_NAME' 
+docker run -d --name app-inspecao -p 8080:8000 -e APP_NAME='Aplicação para Inspeção' app-docker-modulo2:1.0
+docker ps
+
+# inspecionando
+docker inspec app-inspecao  (esse comando gera um json com várias informações referentes ao container)
+
+
+# ver o consumo do container
+docker stats
+
+
+# ver os processos em execução de determinado container
+docker top nome-container
+
+3 mosra todos os containers, ativos ou inativos
+docker ps -a
+
+# removendo a imagem
+docker rmi nome-da-imagem
+
+# removendo o volume
+docker volume rm nome-volume
+
+
+
+=======  Módulo 04 - DOCKER COMPOSE
+
+Aula 16 - Introdução
+Usado em aplicações completas com toda a stack da aplicação(linguagem, framework, bd, etc). Importante lembrar que ele não substitui o dockerfile, e sim organiza a execução dos containers responsáveis pela aplicação
+
+faz um exemplo simples com uma aplicação que usa: python, postgres, streamlit. Com  variáveis de ambiente e arquivo requirements.txt
+
+
+07/06/2026
+Aula 18 - Criando containers e testando
+
+docker compose up --build
+
+ao final da execução, mostra o endereço url para acessar a aplicação
+
+URL: http://0.0.0.0:8501   , basta substituir no browse para: http://localhost:8501
+
+o comando 'docker ps' mostra os dois containers dessa aplicação: streamlit e postgres
+
+ outros comandos:
+docker compose logs
+
+logs do banco: docker compose logs db  # aqui é o nome definido em DB_HOST
+
+- entrando no terminal da aplicação docker:
+docker compose exec app sh
+
+
+- entrando no psql do banco
+docker compose exec db psql -U user -d clientesdb
+
+e pode usar comandos sql: select * from clientes;
+
+sair: /q
+
+- removendo os containers: docker compose down
+
+
+subindo novamente: docker compose up -d
+
+obs: aqui os dados estão persistidos devido ao volume
+
+- removendo os containers e o volume: docker compose down -v
+
+
+resumo:
+containers individuais são criados com 'docker run ....'
+containers que criam aplicações são criados com 'docker compose ...' (várias imagens na mesma aplicação)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
